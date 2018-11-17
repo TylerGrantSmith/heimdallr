@@ -9,7 +9,7 @@ monitor.default <- function(x, ...) {
 monitor.data.frame <-
   function(x,
            vars = NULL,
-           by = NULL,
+           group_var = NULL,
            ...) {
 
     if(is.null(vars)) {
@@ -24,22 +24,18 @@ monitor.data.frame <-
                   paste0(setdiff(vars,colnames(.x)),collapse=", ")),
            call. = FALSE)
 
-    x <- x[, vars]
+    x <- select(x, vars, group_var)
 
     var_info <- tibble::tibble(variable = vars)
     var_info$source <- "original"
 
     out <- list(
       var_info = var_info,
-      term_info = var_info,
-      by_var = NULL,
-      comparisons = NULL,
-      descriptions = NULL,
-      steps = NULL,
-      template = x,
-      levels = NULL,
-      retained = NA,
-      initialized = F
+      group_var = group_var,
+      vars = c(vars),
+      steps = list(),
+      comparisons = list(),
+      data = x
     )
 
     class(out) <- "monitor"
@@ -82,10 +78,13 @@ get_data <- function(.tbl, .grp, .var, .flt, sort = T) {
   return(x)
 }
 
-execute.monitor <- function(m, ...) {
-  get_data()
+execute <- function(object, ...) {
+  UseMethod("execute")
+}
 
+execute.monitor <- function(m, ...) {
   for(i in seq_along(m$steps)) {
-    execute(m$steps[[i]])
+    m <- execute(m$steps[[i]], m)
   }
+  m
 }
