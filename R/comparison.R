@@ -60,6 +60,7 @@ print.compare_distribution <- function(...) {
 
 }
 
+<<<<<<< HEAD
 execute.compare_distribution <- function(m) {
   #m <- get_data()
   generate_jsd(m$template)
@@ -84,18 +85,35 @@ generate_jsd <- function(x, grp, var) {
          },
          by = grp]
 
+=======
+execute.compare_distribution <- function(...) {
+  m$comparisons[[id]] <- results
+}
+
+
+generate_jsd <- function(x) {
+  a <- x
+
+  b <- a[,{d_sum = sum(n); .SD[, .(n = n,  prop = n / d_sum), by = var]}, by = grp]
+>>>>>>> 45c7faed4c1fcd6b8b6de24aa89258b1541346b0
   rm(a); gc()
 
   form <- as.formula(glue::glue("{var} ~ {grp}"))
 
   c <- dcast(data = b,
              formula = form,
+<<<<<<< HEAD
              value.var = c("proportion"),
+=======
+             value.var = c(#"prop",
+               "prop"),
+>>>>>>> 45c7faed4c1fcd6b8b6de24aa89258b1541346b0
              fun.aggregate =  mean,
              na.rm = T,
              fill = 0)
   rm(b); gc()
 
+<<<<<<< HEAD
   c[, reference := .SD, .SDcols = 2] # create column referencing first date
 
   d <- melt(data = c, id.vars = c("reference",var), variable.name = grp)
@@ -112,6 +130,24 @@ generate_jsd <- function(x, grp, var) {
 
   rm(e); gc()
 
+=======
+
+  c[, prior_fix := .SD, .SDcols = 2]
+
+  d <- melt(data = c, id.vars = c("prior_fix",var), variable.name = grp)
+  rm(c); gc()
+  e <- copy(d)
+
+  e[ ,prior_lag := shift(.(value),1L, fill = 0), by = var]
+
+  jsd <- e[,list(JSD(as.matrix(rbind(prior_lag, value))),
+                 JSD(as.matrix(rbind(prior_fix, value)))),
+           by = grp]
+
+  rm(e); gc()
+
+  setnames(jsd, c(grp, "JSD_LAG", "JSD_FIX") )
+>>>>>>> 45c7faed4c1fcd6b8b6de24aa89258b1541346b0
   jsd[1, JSD_LAG := 0]
   jsd[ , JSD_LAG_DIFF := shift(x=JSD_LAG, n=1L, fill = 0, type = "lag")][ , JSD_LAG_DIFF := JSD_LAG - JSD_LAG_DIFF]
   jsd[ , JSD_FIX_DIFF := shift(x=JSD_FIX, n=1L, fill = 0, type = "lag")][ , JSD_FIX_DIFF := JSD_FIX - JSD_FIX_DIFF]
