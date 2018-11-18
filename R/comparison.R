@@ -21,18 +21,14 @@ compare_distribution <- function(
   role = NA,
   initialized = FALSE,
   skip = FALSE,
-  id = "compare_dist",#rand_id("compare_distribution"),
   method = "jsd",
-  fixed = NULL,
-  lag = NULL) {
+  id = rand_id("compare_distribution")) {
   add_comparison(m,
                  compare_distribution_new(
                    id = id,
                    role = role,
                    initialized = initialized,
                    method = method,
-                   fixed = fixed,
-                   lag = lag,
                    ...))
 }
 
@@ -41,12 +37,10 @@ compare_distribution_new <- function(
   role,
   initialized,
   method,
-  fixed,
-  lag,
   ...) {
   comparison(
-    id = id,
     subclass = "distribution",
+    id = id,
     role = role,
     initialized = initialized,
     method = method,
@@ -64,6 +58,15 @@ print.compare_distribution <- function(...) {
 }
 
 execute.compare_distribution <- function(object, m) {
-  m$comparisons[[object$id]] <- generate_jsd(m$data, m$group_var, m$vars[[1]], method = "shift", type = "lag", n = 1)
+  m$comparisons[[object$id]] <-
+    map2(m$densities,
+         m$watch_vars,
+        ~generate_jsd(.x,
+                      .y,
+                      m$group_var,
+                      method = "shift",
+                      type = "lag",
+                      n = 1)) %>%
+    set_names(m$watch_vars)
   m
 }
