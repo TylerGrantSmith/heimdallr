@@ -3,8 +3,12 @@ generate_jsd_fix <- function(.x, .grp, .var,
                              fun.aggregate = mean,
                              na.rm = T,
                              fill = 0) {
+  if(is.null(reference)) {
+    reference <- colnames(.x)[[2]]
+    warning(glue::glue("`reference` missing.  Using {reference} as comparison"),call. = F)
+  }
   .x[,reference:=.SD[,reference, with = F]]
-  melt(data = .x, id.vars = c("reference",.var), variable.name = .grp)
+  data.table::melt(data = .x, id.vars = c("reference", .var), variable.name = .grp)
 }
 
 generate_jsd_shift <- function(.x, .grp, .var,
@@ -12,43 +16,45 @@ generate_jsd_shift <- function(.x, .grp, .var,
                                fun.aggregate = mean,
                                na.rm = T,
                                fill = 0) {
-  .x <- melt(data = .x, id.vars = .var, variable.name = .grp)
-  .x[ ,reference := shift(.(value), n = n, type = type, fill = fill), by = .var]
+  .x <- data.table::melt(data = .x, id.vars = .var, variable.name = .grp)
+  .x[ ,reference := data.table::shift(.(value), n = n, type = type, fill = fill), by = .var]
   .x
 }
 
 generate_jsd <- function(.density, .var, .grp,
-                         method = "fix",
-                         ...,
+                         distance_method,
+                         method,
+                         options,
                          fun.aggregate = mean,
                          na.rm = T,
                          fill = 0) {
 
-  c <- dcast(data = .density,
-             formula = as.formula(glue::glue("{.var} ~ {.grp}")),
-             value.var = c("PROP"),
-             fun.aggregate = mean,
-             na.rm = T,
-             fill = 0)
+  wide <- data.table::dcast(
+    data = .density,
+    formula = as.formula(glue::glue("{.var} ~ {.grp}")),
+    value.var = c("PROP"),
+    fun.aggregate = mean,
+    na.rm = T,
+    fill = 0)
 
   jsd <- do.call(
     glue::glue("generate_jsd_{method}"),
     args =
-      list(
-        .x = c, .grp = .grp, .var = .var,
+      c(list(
+        .x = wide, .grp = .grp, .var = .var,
         fun.aggregate = fun.aggregate,
         na.rm = na.rm,
-        fill = fill,
-        ...))
+        fill = fill),
+        options))
 
   jsd <-
     suppressMessages(
-      jsd[,.(JSD = philentropy::JSD(as.matrix(rbind(reference, value)))),
-        by = .grp])
+      jsd[,.(DISTANCE = philentropy::distance(method = distance_method, as.matrix(rbind(reference, value)), test.na = F)),
+          by = .grp])
 
   if(method == "shift")
-    jsd[1,JSD := 0]
+    jsd[1,DISTANCE := 0]
 
-  jsd[ , JSD_DIFF := shift(x = JSD, n=1L, fill = 0, type = "lag")][ , JSD_DIFF := JSD - JSD_DIFF]
+  jsd[ , DIFF := data.table::shift(x = DISTANCE, n=1L, fill = 0, type = "lag")][ , DIFF := DISTANCE - DIFF]
   jsd
 }
